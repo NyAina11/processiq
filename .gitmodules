@@ -1,0 +1,6 @@
+[submodule "process-IQ-rush-school"]
+	path = process-IQ-rush-school
+	url = ../process-IQ-rush-school
+[submodule "ProcessIQFileGenerator"]
+	path = ProcessIQFileGenerator
+	url = ../ProcessIQFileGenerator
