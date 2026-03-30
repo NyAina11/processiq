@@ -1,0 +1,25 @@
+# Environment
+.env
+.env.local
+.env.production
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Build outputs (handled inside sub-projects)
+dist/
+build/
+
+# Logs
+*.log
+logs/
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo

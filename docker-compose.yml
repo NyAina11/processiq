@@ -1,0 +1,60 @@
+services:
+  # =====================================================
+  # BACKEND — Node.js/Express API
+  # =====================================================
+  backend:
+    build:
+      context: ./ProcessIQFileGenerator
+      dockerfile: Dockerfile
+    container_name: processiq_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 8001
+      AIRTABLE_API_TOKEN: ${AIRTABLE_API_TOKEN}
+      AIRTABLE_BASE_ID: ${AIRTABLE_BASE_ID}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      JWT_SECRET: ${JWT_SECRET:-changeme}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - processiq_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # =====================================================
+  # FRONTEND — React/Vite (built) served by nginx
+  # =====================================================
+  frontend:
+    build:
+      context: ./process-IQ-rush-school
+      dockerfile: Dockerfile
+      args:
+        VITE_BASE_API_URL: /api
+    container_name: processiq_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - processiq_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  backend_uploads:
+    name: processiq_uploads
+
+networks:
+  processiq_net:
+    name: processiq_network
+    driver: bridge
