@@ -1,0 +1,47 @@
+name: 🚀 Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+  # Triggered by submodule update commits
+  repository_dispatch:
+    types: [submodule-updated]
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy via SSH to VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: 📡 Connect & Deploy on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            set -e
+            echo "▶️  Navigating to project directory"
+            cd /opt/processiq
+
+            echo "▶️  Pulling latest parent repo changes"
+            git pull origin main
+
+            echo "▶️  Updating all submodules to their latest committed ref"
+            git submodule update --init --recursive
+
+            echo "▶️  Pulling latest code in each submodule"
+            git submodule foreach 'git fetch origin && git checkout $(git rev-parse --abbrev-ref HEAD) && git pull origin $(git rev-parse --abbrev-ref HEAD)'
+
+            echo "▶️  Rebuilding Docker images"
+            make build
+
+            echo "▶️  Restarting services"
+            make up
+
+            echo "✅  Deployment complete!"
