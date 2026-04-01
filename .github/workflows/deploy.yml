@@ -32,11 +32,8 @@ jobs:
             echo "▶️  Pulling latest parent repo changes"
             git pull origin main
 
-            echo "▶️  Updating all submodules to their latest committed ref"
-            git submodule update --init --recursive
-
-            echo "▶️  Pulling latest code in each submodule"
-            git submodule foreach 'git fetch origin && git checkout $(git rev-parse --abbrev-ref HEAD) && git pull origin $(git rev-parse --abbrev-ref HEAD)'
+            echo "▶️  Updating submodules to their tracked remote branch"
+            git submodule update --init --recursive --remote --merge
 
             echo "▶️  Rebuilding Docker images"
             make build
