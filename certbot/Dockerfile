@@ -5,4 +5,3 @@ FROM certbot/certbot:latest
 # Install the DuckDNS DNS plugin for certbot
 RUN pip install certbot-dns-duckdns --no-cache-dir
 
-ENTRYPOINT []

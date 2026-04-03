@@ -2,16 +2,10 @@
 # =============================================================================
 # init-letsencrypt.sh
 # Obtient le premier certificat Let's Encrypt pour process1q.duckdns.org
-# via le challenge DNS DuckDNS (plugin certbot-dns-duckdns).
+# via le challenge DNS DuckDNS.
 #
 # USAGE (sur le VPS, une seule fois) :
 #   DUCKDNS_TOKEN=<ton_token> CERTBOT_EMAIL=<ton_email> ./scripts/init-letsencrypt.sh
-#
-# Variables d'environnement requises :
-#   DUCKDNS_TOKEN   — token DuckDNS (duckdns.org)
-#   CERTBOT_EMAIL   — email pour Let's Encrypt
-# Variables optionnelles :
-#   DOMAIN          — domaine cible (défaut : process1q.duckdns.org)
 # =============================================================================
 set -e
 
@@ -23,16 +17,15 @@ if [ -f .env ]; then
 fi
 
 DOMAIN="${DOMAIN:-process1q.duckdns.org}"
-EMAIL="${CERTBOT_EMAIL:?'CERTBOT_EMAIL est requis (ex: CERTBOT_EMAIL=mon@email.com)'}"
-TOKEN="${DUCKDNS_TOKEN:?'DUCKDNS_TOKEN est requis (récupéré sur duckdns.org)'}"
+EMAIL="${CERTBOT_EMAIL:?'CERTBOT_EMAIL est requis'}"
+TOKEN="${DUCKDNS_TOKEN:?'DUCKDNS_TOKEN est requis'}"
 
 echo "=== ProcessIQ — Initialisation Let's Encrypt ==="
 echo "Domaine  : $DOMAIN"
 echo "Email    : $EMAIL"
 echo ""
 
-# 1. Écrire le fichier de credentials DuckDNS DANS le volume Docker
-#    (on passe par le conteneur certbot pour écrire dans /etc/letsencrypt)
+# 1. Écrire le fichier de credentials DuckDNS dans le volume Docker
 echo "▶ Écriture des credentials DuckDNS dans le volume certbot..."
 docker compose run --rm --entrypoint /bin/sh certbot -c \
   "mkdir -p /etc/letsencrypt && \
@@ -42,10 +35,12 @@ docker compose run --rm --entrypoint /bin/sh certbot -c \
 
 echo ""
 
-# 2. Obtenir le certificat Let's Encrypt via DNS challenge DuckDNS
+# 2. Obtenir le certificat — on override l'entrypoint pour appeler certbot directement
+#    (le service docker-compose a entrypoint=/bin/sh pour la boucle de renouvellement,
+#     ici on le court-circuite avec --entrypoint certbot)
 echo "▶ Émission du certificat Let's Encrypt (DNS challenge DuckDNS)..."
 echo "  (environ 60s de propagation DNS — soyez patient)"
-docker compose run --rm certbot \
+docker compose run --rm --entrypoint certbot certbot \
   certonly \
   --non-interactive \
   --agree-tos \
