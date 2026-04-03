@@ -98,7 +98,7 @@ services:
         trap exit TERM
         while :; do
           certbot renew --quiet \
-            --dns-duckdns \
+            --authenticator dns-duckdns \
             --dns-duckdns-credentials /etc/letsencrypt/duckdns.ini \
             --dns-duckdns-propagation-seconds 60
           sleep 43200

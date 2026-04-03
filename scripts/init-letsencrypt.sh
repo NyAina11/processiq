@@ -45,7 +45,7 @@ docker compose run --rm --entrypoint certbot certbot \
   --non-interactive \
   --agree-tos \
   --email "$EMAIL" \
-  --dns-duckdns \
+  --authenticator dns-duckdns \
   --dns-duckdns-credentials /etc/letsencrypt/duckdns.ini \
   --dns-duckdns-propagation-seconds 60 \
   -d "$DOMAIN"
