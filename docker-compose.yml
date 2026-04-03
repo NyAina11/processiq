@@ -89,15 +89,18 @@ services:
       # ACME challenge webroot (HTTP-01, for compatibility)
       - certbot_www:/var/www/certbot
     # Run renewal check every 12h; certbot only renews when < 30 days left
-    entrypoint: >
-      /bin/sh -c "trap exit TERM;
-      while :; do
-        certbot renew --quiet
-          --dns-duckdns
-          --dns-duckdns-credentials /etc/letsencrypt/duckdns.ini
-          --dns-duckdns-propagation-seconds 60;
-        sleep 12h & wait ${!};
-      done"
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        trap exit TERM
+        while :; do
+          certbot renew --quiet \
+            --dns-duckdns \
+            --dns-duckdns-credentials /etc/letsencrypt/duckdns.ini \
+            --dns-duckdns-propagation-seconds 60
+          sleep 43200
+        done
     networks:
       - processiq_net
 

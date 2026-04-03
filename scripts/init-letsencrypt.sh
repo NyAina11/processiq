@@ -7,45 +7,44 @@
 # USAGE (sur le VPS, une seule fois) :
 #   DUCKDNS_TOKEN=<ton_token> CERTBOT_EMAIL=<ton_email> ./scripts/init-letsencrypt.sh
 #
-# Variables d'environnement (ou définies dans .env) :
+# Variables d'environnement requises :
+#   DUCKDNS_TOKEN   — token DuckDNS (duckdns.org)
+#   CERTBOT_EMAIL   — email pour Let's Encrypt
+# Variables optionnelles :
 #   DOMAIN          — domaine cible (défaut : process1q.duckdns.org)
-#   DUCKDNS_TOKEN   — token DuckDNS (obligatoire)
-#   CERTBOT_EMAIL   — email pour Let's Encrypt (obligatoire)
 # =============================================================================
 set -e
+
+# Charger .env si présent
+if [ -f .env ]; then
+  set -o allexport
+  source .env
+  set +o allexport
+fi
 
 DOMAIN="${DOMAIN:-process1q.duckdns.org}"
 EMAIL="${CERTBOT_EMAIL:?'CERTBOT_EMAIL est requis (ex: CERTBOT_EMAIL=mon@email.com)'}"
 TOKEN="${DUCKDNS_TOKEN:?'DUCKDNS_TOKEN est requis (récupéré sur duckdns.org)'}"
 
-# Charger .env si présent et variables non définies
-if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs) 2>/dev/null || true
-  DOMAIN="${DOMAIN:-process1q.duckdns.org}"
-  EMAIL="${CERTBOT_EMAIL:-$EMAIL}"
-  TOKEN="${DUCKDNS_TOKEN:-$TOKEN}"
-fi
-
 echo "=== ProcessIQ — Initialisation Let's Encrypt ==="
 echo "Domaine  : $DOMAIN"
 echo "Email    : $EMAIL"
-
-# 1. Créer le fichier de credentials DuckDNS pour certbot
-mkdir -p /etc/letsencrypt
-cat > /etc/letsencrypt/duckdns.ini <<EOF
-dns_duckdns_token = ${TOKEN}
-EOF
-chmod 600 /etc/letsencrypt/duckdns.ini
-
-# 2. Démarrer nginx en mode init (HTTP seulement) pendant l'émission
 echo ""
-echo "▶ Démarrage nginx (mode init HTTP)..."
-docker compose -f docker-compose.yml up -d nginx --no-deps \
-  -e NGINX_CONF=nginx-init || true
 
-# 3. Obtenir le certificat via certbot DNS DuckDNS
+# 1. Écrire le fichier de credentials DuckDNS DANS le volume Docker
+#    (on passe par le conteneur certbot pour écrire dans /etc/letsencrypt)
+echo "▶ Écriture des credentials DuckDNS dans le volume certbot..."
+docker compose run --rm --entrypoint /bin/sh certbot -c \
+  "mkdir -p /etc/letsencrypt && \
+   echo 'dns_duckdns_token = ${TOKEN}' > /etc/letsencrypt/duckdns.ini && \
+   chmod 600 /etc/letsencrypt/duckdns.ini && \
+   echo '✓ duckdns.ini créé'"
+
 echo ""
+
+# 2. Obtenir le certificat Let's Encrypt via DNS challenge DuckDNS
 echo "▶ Émission du certificat Let's Encrypt (DNS challenge DuckDNS)..."
+echo "  (environ 60s de propagation DNS — soyez patient)"
 docker compose run --rm certbot \
   certonly \
   --non-interactive \
@@ -60,10 +59,10 @@ echo ""
 echo "✅ Certificat émis avec succès !"
 echo ""
 
-# 4. Redémarrer nginx avec la config HTTPS complète
-echo "▶ Redémarrage nginx avec config HTTPS..."
-docker compose up -d nginx
+# 3. Démarrer tous les services (nginx charge automatiquement le cert)
+echo "▶ Démarrage de tous les services..."
+docker compose up -d
 
 echo ""
-echo "🔒 HTTPS activé sur https://${DOMAIN}"
+echo "🔒 HTTPS actif sur https://${DOMAIN}"
 echo "   Le renouvellement automatique est géré par le conteneur certbot."
