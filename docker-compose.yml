@@ -80,7 +80,9 @@ services:
   # CERTBOT — Let's Encrypt certificate renewal (DNS DuckDNS)
   # =====================================================
   certbot:
-    image: infinityofspace/certbot-dns-duckdns:latest
+    build:
+      context: ./certbot
+      dockerfile: Dockerfile
     container_name: processiq_certbot
     restart: unless-stopped
     volumes:
