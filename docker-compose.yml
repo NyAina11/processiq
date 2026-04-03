@@ -13,7 +13,7 @@ services:
       PORT: 8001
       AIRTABLE_API_TOKEN: ${AIRTABLE_API_TOKEN}
       AIRTABLE_BASE_ID: ${AIRTABLE_BASE_ID}
-      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://process1q.duckdns.org}
       JWT_SECRET: ${JWT_SECRET:-changeme}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
@@ -28,7 +28,7 @@ services:
       start_period: 30s
 
   # =====================================================
-  # FRONTEND — React/Vite (built) served by nginx
+  # FRONTEND — React/Vite (built) served by nginx (internal)
   # =====================================================
   frontend:
     build:
@@ -38,8 +38,7 @@ services:
         VITE_BASE_API_URL: /api
     container_name: processiq_frontend
     restart: unless-stopped
-    ports:
-      - "80:80"
+    # No external port exposure — traffic flows via the nginx reverse proxy
     depends_on:
       - backend
     networks:
@@ -50,9 +49,65 @@ services:
       timeout: 10s
       retries: 3
 
+  # =====================================================
+  # NGINX — Reverse proxy (TLS termination, HTTP→HTTPS)
+  # =====================================================
+  nginx:
+    image: nginx:alpine
+    container_name: processiq_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Full HTTPS config (used after certs are issued)
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # Let's Encrypt certificates (shared with certbot)
+      - letsencrypt_certs:/etc/letsencrypt:ro
+      # ACME challenge webroot (HTTP-01, for compatibility)
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      - frontend
+    networks:
+      - processiq_net
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:80" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =====================================================
+  # CERTBOT — Let's Encrypt certificate renewal (DNS DuckDNS)
+  # =====================================================
+  certbot:
+    image: infinityofspace/certbot-dns-duckdns:latest
+    container_name: processiq_certbot
+    restart: unless-stopped
+    volumes:
+      # Certificates stored here, shared with nginx
+      - letsencrypt_certs:/etc/letsencrypt
+      # ACME challenge webroot (HTTP-01, for compatibility)
+      - certbot_www:/var/www/certbot
+    # Run renewal check every 12h; certbot only renews when < 30 days left
+    entrypoint: >
+      /bin/sh -c "trap exit TERM;
+      while :; do
+        certbot renew --quiet
+          --dns-duckdns
+          --dns-duckdns-credentials /etc/letsencrypt/duckdns.ini
+          --dns-duckdns-propagation-seconds 60;
+        sleep 12h & wait ${!};
+      done"
+    networks:
+      - processiq_net
+
 volumes:
   backend_uploads:
     name: processiq_uploads
+  letsencrypt_certs:
+    name: processiq_letsencrypt
+  certbot_www:
+    name: processiq_certbot_www
 
 networks:
   processiq_net:

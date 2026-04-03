@@ -1,4 +1,4 @@
-.PHONY: up down build logs restart ps clean
+.PHONY: up down build logs restart ps clean reload-nginx renew-certs
 
 up:
 	docker compose up -d
@@ -28,3 +28,14 @@ build-backend:
 # Build uniquement le frontend
 build-frontend:
 	docker compose build --no-cache frontend
+
+# Recharge la config nginx sans downtime
+reload-nginx:
+	docker compose exec nginx nginx -s reload
+
+# Déclenche le renouvellement Let's Encrypt manuellement
+renew-certs:
+	docker compose exec certbot certbot renew --force-renewal \
+		--dns-duckdns \
+		--dns-duckdns-credentials /etc/letsencrypt/duckdns.ini \
+		--dns-duckdns-propagation-seconds 60

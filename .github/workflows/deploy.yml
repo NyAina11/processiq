@@ -24,6 +24,7 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          envs: DUCKDNS_TOKEN,CERTBOT_EMAIL
           script: |
             set -e
             echo "▶️  Navigating to project directory"
@@ -35,6 +36,11 @@ jobs:
             echo "▶️  Updating submodules to their tracked remote branch"
             git submodule update --init --recursive --remote --merge
 
+            echo "▶️  Writing DuckDNS credentials for certbot renewal"
+            mkdir -p /etc/letsencrypt
+            echo "dns_duckdns_token = ${DUCKDNS_TOKEN}" > /etc/letsencrypt/duckdns.ini
+            chmod 600 /etc/letsencrypt/duckdns.ini
+
             echo "▶️  Rebuilding Docker images"
             make build
 
@@ -42,3 +48,6 @@ jobs:
             make up
 
             echo "✅  Deployment complete!"
+        env:
+          DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
+          CERTBOT_EMAIL: ${{ secrets.CERTBOT_EMAIL }}
