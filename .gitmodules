@@ -1,7 +1,8 @@
 [submodule "process-IQ-rush-school"]
 	path = process-IQ-rush-school
 	url = https://github.com/NyAina11/process-IQ-rush-school.git
-	branch = vercel
+	branch = main-release
 [submodule "ProcessIQFileGenerator"]
 	path = ProcessIQFileGenerator
 	url = https://github.com/Liantsoarandria0803/ProcessIQFileGenerator.git
+	branch = main-release
