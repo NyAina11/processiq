@@ -1,0 +1,4 @@
+## 2026-04-16 - Sensitive Data Exposure and Broken Access Control Fixes
+**Vulnerability:** 1. Sensitive password fragments and charcodes were logged during login attempts. 2. The support API relied on spoofable request headers ('x-user-role') and query parameters for authorization instead of verified JWT payloads. 3. JWT secret had a weak fallback that could be used in production.
+**Learning:** Legacy logging used for debugging authentication often persists into production if not carefully audited. Authorization logic using manually provided headers is a common "Broken Access Control" pattern when middleware isn't uniformly applied.
+**Prevention:** Audit all authentication-related console logs and remove sensitive data. Enforce authentication middleware on all sensitive routes and derive roles exclusively from verified JWT payloads. Use centralized configuration with strict environment validation.
