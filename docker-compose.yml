@@ -14,7 +14,9 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-https://process1q.duckdns.org}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       MONGO_URI: ${MONGO_URI}
+      MONGODB_URI: ${MONGO_URI}
       DB_NAME: ${DB_NAME:-processiq}
+      MONGODB_DATABASE: ${DB_NAME:-processiq}
       UPLOAD_DIR: ${UPLOAD_DIR:-uploads}
       MAX_FILE_SIZE: ${MAX_FILE_SIZE:-10485760}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
